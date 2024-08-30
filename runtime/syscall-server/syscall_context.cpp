@@ -54,10 +54,11 @@
 #endif
 
 #if __linux__ && !BPFTIME_BUILD_WITH_LIBBPF
-#define offsetofend(type, member) (offsetof(type, member) + sizeof(((type *)0)->member))
+#define offsetofend(type, member)                                              \
+	(offsetof(type, member) + sizeof(((type *)0)->member))
 static inline __u64 ptr_to_u64(const void *ptr)
 {
-	return (__u64) (unsigned long) ptr;
+	return (__u64)(unsigned long)ptr;
 }
 
 inline int bpf_obj_get_info_by_fd(int bpf_fd, void *info, __u32 *info_len)
@@ -71,7 +72,8 @@ inline int bpf_obj_get_info_by_fd(int bpf_fd, void *info, __u32 *info_len)
 	attr.info.info_len = *info_len;
 	attr.info.info = ptr_to_u64(info);
 
-	err = this->orig_syscall_fn(__NR_bpf, BPF_OBJ_GET_INFO_BY_FD, &attr, attr_sz);
+	err = this->orig_syscall_fn(__NR_bpf, BPF_OBJ_GET_INFO_BY_FD, &attr,
+				    attr_sz);
 	if (!err)
 		*info_len = attr.info.info_len;
 	// no-op stub
@@ -356,26 +358,22 @@ long syscall_context::handle_sysbpf(int cmd, union bpf_attr *attr, size_t size)
 		SPDLOG_DEBUG("Creating map");
 		int id = bpftime_maps_create(
 			-1 /* let the shm alloc fd for us */, attr->map_name,
-			bpftime::bpf_map_attr{
-				(int)attr->map_type,
-				attr->key_size,
-				attr->value_size,
-				attr->max_entries,
-				attr->map_flags,
-				attr->map_ifindex,
-				attr->btf_vmlinux_value_type_id,
-				attr->btf_id,
-				attr->btf_key_type_id,
-				attr->btf_value_type_id,
-				#if __linux__ 
-				#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
-                	attr->map_extra,
-				#else
+			bpftime::bpf_map_attr {
+				(int)attr->map_type, attr->key_size,
+					attr->value_size, attr->max_entries,
+					attr->map_flags, attr->map_ifindex,
+					attr->btf_vmlinux_value_type_id,
+					attr->btf_id, attr->btf_key_type_id,
+					attr->btf_value_type_id,
+#if __linux__
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
+					attr->map_extra,
+#else
 					0, // or some appropriate default value
-    	        #endif
-				#elif __APPLE__
-				attr->map_extra
-				#endif
+#endif
+#elif __APPLE__
+					attr->map_extra
+#endif
 			});
 		SPDLOG_DEBUG(
 			"Created map {}, type={}, name={}, key_size={}, value_size={}",
@@ -577,13 +575,13 @@ long syscall_context::handle_sysbpf(int cmd, union bpf_attr *attr, size_t size)
 			ptr->key_size = map_attr.key_size;
 			ptr->id = attr->info.bpf_fd;
 			ptr->ifindex = map_attr.ifindex;
-			#if __linux__
-			#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
+#if __linux__
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 			ptr->map_extra = map_attr.map_extra;
-			#endif 
-			#elif __APPLE__
+#endif
+#elif __APPLE__
 			ptr->map_extra = map_attr.map_extra;
-			#endif
+#endif
 			// TODO: handle the rest info
 			ptr->max_entries = map_attr.max_ents;
 			ptr->map_flags = map_attr.flags;
